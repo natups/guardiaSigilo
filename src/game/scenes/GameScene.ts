@@ -16,7 +16,7 @@ import {
 } from "../../application/simulation/perceptionSimulation";
 import { cellCenter, isWalkable, worldToCell, type GridPoint } from "../../domain/model/grid";
 import type { Vector2 } from "../../domain/model/vector";
-import { advanceAlongPath } from "../../domain/navigation/pathFollower";
+import { advanceAlongPath, type Waypoint } from "../../domain/navigation/pathFollower";
 import type { SearchAlgorithm, SearchResult, SearchStatus } from "../../domain/navigation/search";
 import { timeSinceLastPerception } from "../../domain/perception/memory";
 import type { VisionReason, VisionResult } from "../../domain/perception/perception";
@@ -57,13 +57,16 @@ export class GameScene extends Phaser.Scene {
   private perceptionGraphics!: Phaser.GameObjects.Graphics;
   private targetMarker!: Phaser.GameObjects.Arc;
   private lastKnownMarker!: Phaser.GameObjects.Arc;
+  private alertIndicator!: Phaser.GameObjects.Arc;
   private navigationHud!: Phaser.GameObjects.Text;
   private navigationAlgorithm: SearchAlgorithm = "astar";
   private navigationGoal: GridPoint = GUARD_START;
   private navigationSummary: readonly string[] = [];
   private guardFacing: Vector2 = { x: -1, y: 0 };
-  private guardWaypoints: readonly Vector2[] = [];
+  private guardWaypoints: readonly Waypoint[] = [];
   private nextWaypoint = 0;
+  private guardWaitTimeRemaining = 0;
+  private guardPreviouslyVisible = false;
   private perceptionState: PerceptionSimulationState = initialPerceptionState();
 
   public constructor() {
@@ -76,6 +79,8 @@ export class GameScene extends Phaser.Scene {
     this.guardFacing = { x: -1, y: 0 };
     this.guardWaypoints = [];
     this.nextWaypoint = 0;
+    this.guardWaitTimeRemaining = 0;
+    this.guardPreviouslyVisible = false;
     this.perceptionState = initialPerceptionState();
     this.cameras.main.setBackgroundColor("#10161c");
     this.drawGrid();
@@ -130,6 +135,11 @@ export class GameScene extends Phaser.Scene {
       .circle(0, 0, 7, 0x000000, 0)
       .setStrokeStyle(2, 0xe16969)
       .setDepth(5)
+      .setVisible(false);
+    this.alertIndicator = this.add
+      .circle(guardPosition.x, guardPosition.y, 5, 0x73c991, 0.9)
+      .setStrokeStyle(1, 0xffffff, 0.9)
+      .setDepth(6)
       .setVisible(false);
 
     this.add
@@ -271,12 +281,17 @@ export class GameScene extends Phaser.Scene {
       this.guardWaypoints,
       this.nextWaypoint,
       GUARD_SPEED * delta / 1000,
+      this.guardWaitTimeRemaining,
+      delta,
     );
     this.nextWaypoint = movement.nextWaypoint;
+    this.guardWaitTimeRemaining = movement.waitTimeRemaining ?? 0;
     this.guard.setPosition(movement.position.x, movement.position.y);
 
     if (movement.direction) {
       this.guardFacing = movement.direction;
+    } else if (movement.facing) {
+      this.guardFacing = movement.facing;
     }
   }
 
@@ -330,6 +345,18 @@ export class GameScene extends Phaser.Scene {
     if (lastKnown) {
       this.lastKnownMarker.setPosition(lastKnown.x, lastKnown.y);
     }
+
+    this.alertIndicator.setVisible(vision.visible);
+    if (vision.visible) {
+      this.alertIndicator.setPosition(this.guard.x, this.guard.y);
+      if (!this.guardPreviouslyVisible) {
+        this.cameras.main.shake(200, 0.015);
+      }
+    }
+    this.guardPreviouslyVisible = vision.visible;
+
+    const targetZoom = vision.visible ? 1.06 : 1.0;
+    this.cameras.main.zoom = Phaser.Math.Linear(this.cameras.main.zoom, targetZoom, 0.1);
   }
 
   private updateTelemetry(time: number, vision: VisionResult, soundHeard: boolean): void {
@@ -341,8 +368,15 @@ export class GameScene extends Phaser.Scene {
       ? (soundHeard ? "OIDO" : "FUERA DE RANGO")
       : "-";
 
+    const alertLevel = vision.visible
+      ? "PELIGRO"
+      : (this.perceptionState.memory.lastKnownPosition !== null || this.perceptionState.soundEvent !== null)
+      ? "ALERTA"
+      : "SEGURO";
+
     this.navigationHud.setText([
       ...this.navigationSummary,
+      `alerta [${alertLevel}]`,
       `vision ${VISION_LABELS[vision.reason]}`,
       `sonido ${sound}`,
       memory,
