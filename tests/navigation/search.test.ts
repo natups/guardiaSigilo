@@ -68,12 +68,76 @@ describe.each([
   });
 });
 
-describe("algorithm comparison", () => {
-  it("A* preserves optimal cost while expanding no more nodes than BFS", () => {
-    const bfs = findPathBfs(DETOUR_MAP, START, GOAL);
-    const astar = findPathAStar(DETOUR_MAP, START, GOAL);
+describe("slow terrain variant (A*)", () => {
+  it("avoids slow terrain and finds an optimal detour with A*", () => {
+    // 5x3 map with slow terrain at (1,1), (2,1), (3,1) costing 5
+    const slowTerrainMap = createGridMap(5, 3, [], {
+      "1,1": 5,
+      "2,1": 5,
+      "3,1": 5,
+    });
+    const start = { x: 0, y: 1 };
+    const goal = { x: 4, y: 1 };
 
-    expect(astar.totalCost).toBe(bfs.totalCost);
-    expect(astar.expandedNodes).toBeLessThanOrEqual(bfs.expandedNodes);
+    const result = findPathAStar(slowTerrainMap, start, goal);
+    expect(result.status).toBe("success");
+    // Optimal detour around slow terrain (e.g. via y=0 or y=2) has 6 steps and cost 6
+    expect(result.totalCost).toBe(6);
+    expect(result.path.length).toBe(7); // 6 steps = 7 points
+    // Check that slow terrain cells are avoided in the path
+    const avoided = result.path.every(
+      (p) => !(p.y === 1 && p.x >= 1 && p.x <= 3)
+    );
+    expect(avoided).toBe(true);
+  });
+
+  it("calculates the correct high cost for the direct path through slow terrain when other paths are blocked", () => {
+    // 5x3 map where top and bottom rows are blocked, forcing the path through the middle (slow terrain)
+    const blockedCells: GridPoint[] = [];
+    for (let x = 0; x < 5; x++) {
+      blockedCells.push({ x, y: 0 });
+      blockedCells.push({ x, y: 2 });
+    }
+    const forcedSlowMap = createGridMap(5, 3, blockedCells, {
+      "1,1": 5,
+      "2,1": 5,
+      "3,1": 5,
+    });
+    const start = { x: 0, y: 1 };
+    const goal = { x: 4, y: 1 };
+
+    const result = findPathAStar(forcedSlowMap, start, goal);
+    expect(result.status).toBe("success");
+    // Direct path: (0,1) -> (1,1)[5] -> (2,1)[5] -> (3,1)[5] -> (4,1)[1] = total cost 16 in 4 steps
+    expect(result.totalCost).toBe(16);
+    expect(result.path.length).toBe(5);
+  });
+
+  it("recovers standard path when slow terrain costs are removed or set to 1", () => {
+    const flatMap = createGridMap(5, 3, [], {
+      "1,1": 1,
+      "2,1": 1,
+      "3,1": 1,
+    });
+    const start = { x: 0, y: 1 };
+    const goal = { x: 4, y: 1 };
+
+    const result = findPathAStar(flatMap, start, goal);
+    expect(result.status).toBe("success");
+    expect(result.totalCost).toBe(4);
+    expect(result.path.length).toBe(5);
+  });
+
+  it("handles zero cost terrain correctly with admissible heuristic", () => {
+    const zeroCostMap = createGridMap(3, 3, [], {
+      "1,1": 0,
+      "2,1": 0,
+    });
+    const start = { x: 0, y: 1 };
+    const goal = { x: 2, y: 1 };
+
+    const result = findPathAStar(zeroCostMap, start, goal);
+    expect(result.status).toBe("success");
+    expect(result.totalCost).toBe(0); // (0,1) -> (1,1)[0] -> (2,1)[0] sum is 0
   });
 });

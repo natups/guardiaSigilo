@@ -7,6 +7,7 @@ export interface GridMap {
   readonly width: number;
   readonly height: number;
   readonly blocked: ReadonlySet<string>;
+  readonly terrainCosts?: ReadonlyMap<string, number>;
 }
 
 export function cellKey(point: GridPoint): string {
@@ -17,6 +18,7 @@ export function createGridMap(
   width: number,
   height: number,
   blockedCells: Iterable<GridPoint>,
+  terrainCosts?: ReadonlyMap<string, number> | Readonly<Record<string, number>>,
 ): GridMap {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
     throw new Error("Grid dimensions must be positive integers.");
@@ -30,7 +32,26 @@ export function createGridMap(
     blocked.add(cellKey(point));
   }
 
-  return { width, height, blocked };
+  let costsMap: ReadonlyMap<string, number> | undefined;
+  if (terrainCosts) {
+    const map = terrainCosts instanceof Map ? terrainCosts : new Map(Object.entries(terrainCosts));
+    for (const [key, cost] of map.entries()) {
+      if (!Number.isFinite(cost) || cost < 0) {
+        throw new Error(`Invalid terrain cost for cell ${key}: must be a non-negative number.`);
+      }
+    }
+    costsMap = map;
+  }
+
+  return { width, height, blocked, ...(costsMap ? { terrainCosts: costsMap } : {}) };
+}
+
+export function cellTerrainCost(map: GridMap, point: GridPoint): number {
+  if (!map.terrainCosts) {
+    return 1;
+  }
+  const cost = map.terrainCosts.get(cellKey(point));
+  return cost !== undefined ? cost : 1;
 }
 
 export function isInside(
