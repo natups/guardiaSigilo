@@ -45,17 +45,17 @@ version: 5
 - **Reversibilidad:** Al retornar a costo uniforme 1, A* recupera automáticamente la ruta directa de 4 pasos y costo 4.
 
 ## 5. Matriz de Aceptación (BASE-AC1 a BASE-AC6 y A-AC1 a A-AC3)
-| ID Caso | Descripción | Comando exacto de ejecución | Resultado Esperado | Resultado Real / Evidencia | Estado |
-|---|---|---|---|---|---|
-| `BASE-AC1` | Grilla estándar 5x3 | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Camino 4 pasos, costo 4 | Pasó correctamente | Aprobado |
-| `BASE-AC2` | Destino inaccesible | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | `status: "unreachable"` | Pasó correctamente | Aprobado |
-| `BASE-AC3` | Inicio inválido | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | `status: "invalid-start"` | Pasó correctamente | Aprobado |
-| `BASE-AC4` | Destino inválido | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | `status: "invalid-goal"` | Pasó correctamente | Aprobado |
-| `BASE-AC5` | Inicio igual a meta | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Camino `[S]`, costo 0 | Pasó correctamente | Aprobado |
-| `BASE-AC6` | Integración `navigationDemo` | `& node ./node_modules/vitest/vitest.mjs run tests/application/navigationDemo.test.ts` | Ruta válida y costos coherentes | Pasó correctamente (3/3) | Aprobado |
-| `A-AC1` | Terreno lento - Ruta directa | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Costo 16 en 4 pasos | Pasó correctamente | Aprobado |
-| `A-AC2` | Terreno lento - Desvío óptimo | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Costo óptimo 6 en 6 pasos | Pasó correctamente | Aprobado |
-| `A-AC3` | Reversibilidad de costos | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Retorna a costo 4 en 4 pasos | Pasó correctamente | Aprobado |
+| ID Caso | Definición Oficial según Consigna | Comando exacto de ejecución | Evidencia / Resultado Observado | Estado |
+|---|---|---|---|---|
+| `BASE-AC1` | Exploración, commit inicial, cambios previos y validación de referencia. | `& node ./node_modules/vitest/vitest.mjs run` | Estado inicial verificado, 49/49 tests pasados | Aprobado |
+| `BASE-AC2` | Comparación BFS/A* y trazas DFS/Dijkstra. | Revisión teórica y comparativa en spec/evidencia | Trazas documentadas y analizadas | Aprobado |
+| `BASE-AC3` | Inicio=meta, barrera inaccesible y extremos inválidos. | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Casos límite evaluados y aprobados (12/12) | Aprobado |
+| `BASE-AC4` | Aprobación previa de spec y plan, contraste y decisión humana. | Revisión de plan y spec (version 4/5) | Planificación previa documentada; sin estampa temporal de aprobación humana previa independiente | Parcial (registrado documentalmente sin timestamp previo) |
+| `BASE-AC5` | Criterios de la variante, consumidor real, validación y diff. | `& node ./node_modules/vitest/vitest.mjs run tests/application/navigationDemo.test.ts` | Integración verificada con `calculateRoute` (3/3) | Aprobado |
+| `BASE-AC6` | Tres documentos, URL y commit de la misma versión final. | `& git rev-parse HEAD` | Commit `8860774e21e8d830c31d15eb5b9acce814863e74` y repo `https://github.com/natups/guardiaSigilo` | Aprobado |
+| `A-AC1` | Variante A - Ruta directa sobre terreno lento con costo real acumulado. | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Costo 16 en 4 pasos verificado | Aprobado |
+| `A-AC2` | Variante A - Desvío óptimo encontrado por A* evitando terreno lento. | `& node ./node_modules/vitest/vitest.mjs run tests/navigation/search.test.ts` | Costo óptimo 6 en 6 pasos verificado | Aprobado |
+| `A-AC3` | Variante A - Reversibilidad y verificación de consumidor real con A* y BFS. | `& node ./node_modules/vitest/vitest.mjs run tests/application/navigationDemo.test.ts` | Reversibilidad y consumidor verificados | Aprobado |
 
 ## 6. Comandos Ejecutados y Verificaciones Globales
 - **Pruebas unitarias de grilla:** `& node ./node_modules/vitest/vitest.mjs run tests/model/grid.test.ts` $\rightarrow$ 6/6 aprobados.
